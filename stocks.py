@@ -1,30 +1,35 @@
+
+from numpy.ma.core import empty
 from requests import get
-from urllib.request import urlopen
-import yfinance as yf
+import json
+from datetime import date
+
 def download_data(ticker: str) -> dict:
+    ticker = ticker.upper()
+    today = date.today()
+    start = str(today.replace(year=today.year - 1))
+    base_url = "https://api.nasdaq.com/"
+    path = f"/api/quote/{ticker}/historical?assetclass=stocks&fromdate={start}&limit=9999"
+
     try:
-        stock = yf.Ticker(ticker)
-        hist = stock.history(period="2d")
+        data = get(base_url + path, headers={"User-Agent": "Mozilla/5.0"})
+        data = data.json()
+        return data
 
-        return hist.to_dict()
     except Exception as e:
-        print(f"Error retrieving information for {ticker}: Error: {e}")
-        return
+        print(f"Exception occurred {e}")
 
 
-retrieved_data = download_data("AAPL")
+data = download_data("TSLA")
+stockfile = "stocks.json"
 
-dates = list(next(iter(retrieved_data.values())).keys())
+with open(stockfile, "w") as file:
+    json.dump(data, file)
 
-for date in dates:
-    print(f"\nDate: {date}")
-    for key, values in retrieved_data.items():
-        print(f"{key}: {values.get(date, 'N/A')}")
-
-try:
-    response = get("https://ipinfo.io/json")
-    print(response.json())
-except Exception as e:
-    print(e)
-
-
+for price in list(data["data"]["tradesTable"]["rows"]):
+    print("Date: " + price["date"])
+    print("Opening: " + price["open"])
+    print("Close: " +price["close"])
+    print("Highest: " + price["high"])
+    print("Lowest: " + price["low"])
+    print()
